@@ -2,10 +2,6 @@ package liwey.json2pojo;
 
 import lombok.Data;
 
-/**
- * @author Leon Zeng
- * @since 2018/12/28 18:04
- */
 @Data
 public class Config {
   private boolean fieldTypePrimitive = false;

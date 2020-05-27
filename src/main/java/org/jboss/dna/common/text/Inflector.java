@@ -42,11 +42,11 @@ public class Inflector implements Cloneable {
 
   protected static final Inflector INSTANCE = new Inflector();
 
-  public static final Inflector getInstance() {
+  public static Inflector getInstance() {
     return INSTANCE;
   }
 
-  protected class Rule {
+  protected static class Rule {
 
     protected final String expression;
     protected final Pattern expressionPattern;
@@ -82,7 +82,7 @@ public class Inflector implements Cloneable {
       if (obj == this) return true;
       if (obj != null && obj.getClass() == this.getClass()) {
         final Rule that = (Rule) obj;
-        if (this.expression.equalsIgnoreCase(that.expression)) return true;
+        return this.expression.equalsIgnoreCase(that.expression);
       }
       return false;
     }
@@ -93,13 +93,13 @@ public class Inflector implements Cloneable {
     }
   }
 
-  private LinkedList<Rule> plurals = new LinkedList<Rule>();
-  private LinkedList<Rule> singulars = new LinkedList<Rule>();
+  private final LinkedList<Rule> plurals = new LinkedList<>();
+  private final LinkedList<Rule> singulars = new LinkedList<>();
   /**
    * The lowercase words that are to be excluded and not processed. This map can be modified by the users via
    * {@link #getUncountables()}.
    */
-  private final Set<String> uncountables = new HashSet<String>();
+  private final Set<String> uncountables = new HashSet<>();
 
   public Inflector() {
     initialize();
@@ -420,7 +420,7 @@ public class Inflector implements Cloneable {
    * @return the string with the number and ordinal suffix
    */
   public String ordinalize(int number) {
-    int remainder = number % 100;
+    int remainder;
     String numberStr = Integer.toString(number);
     if (11 <= number && number <= 13) return numberStr + "th";
     remainder = number % 10;

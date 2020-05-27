@@ -6,9 +6,6 @@ import java.util.ResourceBundle;
 
 /**
  * Resources helper, name like android.
- *
- * @author Leon Zeng
- * @since 2019/1/2 15:37
  */
 public class R {
   public static String get(String key, Object... params) {

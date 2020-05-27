@@ -1,47 +1,20 @@
 package liwey.json2pojo;
 
-import static liwey.json2pojo.ConfigUtil.config;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import com.google.gson.annotations.SerializedName;
-import com.sun.codemodel.JAnnotationArrayMember;
-import com.sun.codemodel.JAnnotationUse;
-import com.sun.codemodel.JBlock;
-import com.sun.codemodel.JCodeModel;
-import com.sun.codemodel.JDefinedClass;
-import com.sun.codemodel.JExpr;
-import com.sun.codemodel.JFieldVar;
-import com.sun.codemodel.JMethod;
-import com.sun.codemodel.JMod;
-import com.sun.codemodel.JPackage;
-import com.sun.codemodel.JType;
-import com.sun.codemodel.JVar;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import com.sun.codemodel.*;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang.StringUtils;
 import org.jboss.dna.common.text.Inflector;
+
+import javax.swing.*;
+import java.io.File;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static liwey.json2pojo.ConfigUtil.config;
 
 /**
  * Contains the code to generate Java POJO classes from given JSON text.
@@ -53,11 +26,11 @@ class Generator {
   private final String packageName;
   private final JTextField resultTextField;
 
-  private Map<String, JDefinedClass> definedClasses = new HashMap<>();
+  private final Map<String, JDefinedClass> definedClasses = new HashMap<>();
   private JType deferredClass;
   private JType deferredList;
   private FieldComparator fieldComparator;
-  private Map<JDefinedClass, Set<FieldInfo>> fieldMap = new HashMap<>();
+  private final Map<JDefinedClass, Set<FieldInfo>> fieldMap = new HashMap<>();
 
   Generator(final String packageName, final String moduleSourceRoot, final JTextField
         resultTextField) {
@@ -114,7 +87,7 @@ class Generator {
           resultTextField.setText(R.get("generating", clazz.name()));
         }
       });
-      List<GeneratedField> fields = generateFields(clazz, fieldMap.get(clazz), codeModelPackage.owner());
+      generateFields(clazz, fieldMap.get(clazz), codeModelPackage.owner());
     }
     return definedClasses.size();
   }
@@ -174,10 +147,7 @@ class Generator {
   private void parseArray(JsonArray arrayNode, String className, JPackage codeModelPackage) throws
         Exception {
     // Retrieve the first non-null element of the array
-    Iterator<JsonElement> elementsIterator = arrayNode.iterator();
-    while (elementsIterator.hasNext()) {
-      JsonElement element = elementsIterator.next();
-
+    for (JsonElement element : arrayNode) {
       // Recurse on the first object or array
       if (element.isJsonObject()) {
         parseObject(element.getAsJsonObject(), className, codeModelPackage);
@@ -196,10 +166,9 @@ class Generator {
    * @param propertyName the name of the field to create.
    * @param codeModel    the code model to use for generation.
    * @return a {@link FieldInfo} representing the new field.
-   * @throws Exception if an error occurs.
    */
   private FieldInfo getFieldInfoFromNode(JsonElement node, String propertyName, JCodeModel
-        codeModel) throws Exception {
+        codeModel) {
     // Switch on node type
     if (node.isJsonArray()) {
       // Singularize the class name of a single element
@@ -220,6 +189,7 @@ class Generator {
           FieldInfo fi = getFieldInfoFromNode(firstNode, propertyName, codeModel);
 
           // Make a List<> of the recursed type
+          assert fi != null;
           return new FieldInfo(codeModel.ref(List.class).narrow(fi.type), propertyName);
         } else if (firstNode.isJsonNull()) {
           // Null values? Return List<Deferred>.
@@ -290,11 +260,9 @@ class Generator {
    * @param clazz     the class to generate sub-objects and fields for.
    * @param fields    the set of fields to generate.
    * @param codeModel the code model.
-   * @return a list of generated fields.
-   * @throws Exception if an error occurs.
    */
-  private List<GeneratedField> generateFields(JDefinedClass clazz, Set<FieldInfo> fields,
-                                              JCodeModel codeModel) throws Exception {
+  private void generateFields(JDefinedClass clazz, Set<FieldInfo> fields,
+                              JCodeModel codeModel) {
     List<GeneratedField> generatedFields = new ArrayList<>();
 
     // Get sorted list of field names
@@ -351,7 +319,6 @@ class Generator {
       }
     }
 
-    return generatedFields;
   }
 
   /**
@@ -359,7 +326,7 @@ class Generator {
    *
    * @param clazz the class to annotate.
    */
-  private static void annotateClass(final JDefinedClass clazz) throws ClassNotFoundException {
+  private static void annotateClass(final JDefinedClass clazz) {
     if (config.isLombokNoArgsConstructor()) {
       clazz.annotate(NoArgsConstructor.class);
     }
@@ -393,9 +360,8 @@ class Generator {
       clazz.annotate(Builder.class);
     }
 
-    List<String> suppressWarnings = Arrays.asList(config.getSuppressWarnings().trim()
-          .split("\\,|\\;|\\ "))
-          .stream().filter(x -> !x.isEmpty()).collect(Collectors.toList());
+    List<String> suppressWarnings = Arrays.stream(config.getSuppressWarnings().trim()
+          .split("[,; ]")).filter(x -> !x.isEmpty()).collect(Collectors.toList());
     if (suppressWarnings.size() > 0) {
       JAnnotationUse annotation = clazz.annotate(SuppressWarnings.class);
       if (suppressWarnings.size() == 1) {
@@ -435,17 +401,15 @@ class Generator {
    * @param clazz        the class to generate a getter in.
    * @param field        the field to return.
    * @param propertyName the name of the property.
-   * @return a {@link JMethod} which is a getter for the given field.
    */
-  private static JMethod createGetter(final JDefinedClass clazz, final JFieldVar field,
-                                      final String propertyName) {
+  private static void createGetter(final JDefinedClass clazz, final JFieldVar field,
+                                   final String propertyName) {
     // Method name should start with "get" and then the uppercased class name.
     JMethod getter = clazz.method(JMod.PUBLIC, field.type(), "get" + formatClassName(propertyName));
 
     // Return the field
     JBlock body = getter.body();
     body._return(field);
-    return getter;
   }
 
   /**
@@ -454,9 +418,8 @@ class Generator {
    * @param clazz        the class to generate a setter in.
    * @param field        the field to set.
    * @param propertyName the name of the property.
-   * @return a {@link JMethod} which is a setter for the given field.
    */
-  private static JMethod createSetter(JDefinedClass clazz, JFieldVar field, String propertyName) {
+  private static void createSetter(JDefinedClass clazz, JFieldVar field, String propertyName) {
     // Method name should start with "set" and then the uppercased class name
     JMethod setter = clazz.method(JMod.PUBLIC, void.class, "set" + formatClassName(propertyName));
 
@@ -473,7 +436,6 @@ class Generator {
       // Safe to just assign FieldName = paramName
       body.assign(field, param);
     }
-    return setter;
   }
 
   /**
@@ -515,7 +477,7 @@ class Generator {
     // Iterate over the other characters
     for (int charIndex = 1; charIndex < propertyName.length(); charIndex++) {
       // Append valid characters
-      Character c = propertyName.charAt(charIndex);
+      char c = propertyName.charAt(charIndex);
       if (Character.isAlphabetic(c)) {
         if (uppercaseNext) {
           // Uppercase this letter
