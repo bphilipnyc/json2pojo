@@ -1,14 +1,15 @@
 package liwey.json2pojo;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import static liwey.json2pojo.ConfigUtil.config;
 
@@ -106,9 +107,6 @@ public class GeneratorDialog extends JDialog {
         resultTextField.setToolTipText("<html>" + writer.toString().replace("\n", "<br/>") + "</html>");
       }
     }).start();
-  }
-
-  private void createUIComponents() {
   }
 
   private void saveDialogPosAndSize() {
